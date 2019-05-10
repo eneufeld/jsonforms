@@ -2,17 +2,20 @@
   "extends": "../../tsconfig.base",
   "compilerOptions": {
     "outDir": "./lib",
-    "sourceMap": true
+    "sourceMap": true,
+    "resolveJsonModule": true
   },
-  "exclude":[
-    "node_modules"
-  ],
-  "files": [
-    "./src/index.ts"
-  ],
+  "exclude": ["node_modules"],
+  "files": ["./src/index.ts"],
   "angularCompilerOptions": {
     "strictMetadataEmit": true,
     "generateCodeForLibraries": false,
     "skipTemplateCodegen": true
+  },
+  "paths": {
+    "globalize": ["node_modules/globalize/dist/globalize"],
+    "globalize/*": ["node_modules/globalize/dist/globalize/*"],
+    "cldr": ["node_modules/cldrjs/dist/cldr"],
+    "cldr/*": ["node_modules/cldrjs/dist/cldr/*"]
   }
 }

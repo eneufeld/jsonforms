@@ -34,7 +34,7 @@ import {
   RankedTester,
   rankWith
 } from '@jsonforms/core';
-import { LocaleValidation } from 'angular-l10n';
+import Globalize from 'globalize';
 
 // using change event is non optional here if we want to allow formatting during input
 @Component({
@@ -46,18 +46,13 @@ import { LocaleValidation } from 'angular-l10n';
         matInput
         (input)="onChange($event)"
         placeholder="{{ description }}"
-        [value]="
-          data !== undefined && data !== null && locale
-            ? (data | l10nDecimal: locale)
-            : data !== undefined && data !== null
-            ? data
-            : ''
-        "
+        [value]="getValue()"
         [id]="id"
         [formControl]="form"
         [min]="min"
         [max]="max"
         [step]="multipleOf"
+        [type]="formatter ? 'text' : 'number'"
       />
       <mat-error>{{ error }}</mat-error>
     </mat-form-field>
@@ -68,28 +63,30 @@ export class NumberControlRenderer extends JsonFormsControl {
   max: number;
   multipleOf: number;
   locale: string;
+  formatter: (value: number) => string;
+  parser: (value: string) => number;
 
-  constructor(
-    ngRedux: NgRedux<JsonFormsState>,
-    private localeValidation: LocaleValidation
-  ) {
+  constructor(ngRedux: NgRedux<JsonFormsState>) {
     super(ngRedux);
   }
 
-  getEventValue = (event: any) => {
-    if (this.locale) {
-      const parsedNumber = this.localeValidation.parseNumber(
-        event.target.value,
-        this.locale
-      );
-      if (isNaN(parsedNumber)) {
-        return null;
-      }
-      return parsedNumber;
-    }
+  onChange(ev: any) {
+    if (ev.data === '.' || ev.data === ',' || ev.data === ' ') { return; }
+    super.onChange(ev);
+  }
 
-    return parseFloat(event.target.value);
+  getEventValue = (event: any) => {
+    if (this.parser) {
+      return this.parser(event.target.value);
+    }
+    return event.target.value;
   };
+  getValue = () =>
+    this.data !== undefined && this.data !== null
+      ? this.formatter
+        ? this.formatter(this.data)
+        : ''
+      : '';
 
   mapAdditionalProps() {
     if (this.scopedSchema) {
@@ -97,7 +94,19 @@ export class NumberControlRenderer extends JsonFormsControl {
       this.min = this.scopedSchema.minimum;
       this.max = this.scopedSchema.maximum;
       this.multipleOf = this.scopedSchema.multipleOf || defaultStep;
-      this.locale = getLocale(this.ngRedux.getState());
+      const currentLocale = getLocale(this.ngRedux.getState());
+      if (this.locale !== currentLocale) {
+        this.locale = currentLocale;
+        try {
+          Globalize.locale(this.locale);
+          this.formatter = Globalize.numberFormatter({
+            maximumFractionDigits: 10
+          });
+          this.parser = Globalize.numberParser();
+        } catch (err) {
+          // do nothing
+        }
+      }
     }
   }
 }
